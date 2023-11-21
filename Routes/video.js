@@ -14,6 +14,7 @@ import {
   HistoryController,
   getAllHistoryController,
   deleteHistoryController,
+  deleteAllHistoryController,
 } from "../Controllers/History.js";
 
 import {
@@ -51,6 +52,7 @@ routes.delete(
 
 routes.get("/getAllHistory", getAllHistoryController);
 routes.post("/History", auth, HistoryController);
-routes.delete("/deleteHistory/:userId", auth, deleteHistoryController);
+routes.delete("/deleteHistory/:videoId/:Viewer", auth, deleteHistoryController);
+routes.delete("/deleteAllHistory/:userId", auth, deleteAllHistoryController);
 
 export default routes;

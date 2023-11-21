@@ -18,8 +18,21 @@ export const getAllHistoryController = async (req, res) => {
     res.status(400).send(error.message);
   }
 };
-
 export const deleteHistoryController = async (req, res) => {
+  const { videoId, Viewer } = req.params;
+  try {
+    
+    await History.findOneAndDelete({
+      videoId: videoId,
+      Viewer: Viewer,
+    });
+ 
+    res.status(200).json({ message: "removed from History Videos" });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+export const deleteAllHistoryController = async (req, res) => {
   const { userId } = req.params;
   try {
     await History.deleteMany({
