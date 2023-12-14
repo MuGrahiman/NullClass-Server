@@ -23,7 +23,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/user", userRoutes);
-app.use("/video", videoRoutes);
+app.use("/video", videoRoutes); 
 app.use("/comment", commentsRoutes);
 
 const PORT = process.env.PORT;

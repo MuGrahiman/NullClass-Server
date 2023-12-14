@@ -1,4 +1,5 @@
 import Jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import users from "../Models/auth.js";
 import sendEmailNotification from "../Middleware/mailer.js";
 
@@ -9,7 +10,8 @@ export const login = async (req, res) => {
     const existUser = await users.findOne({ email });
     if (!existUser) {
       try {
-        const newUser = await users.create({ email, id });
+        const bcryptId = await bcrypt.hash(id, 10);
+        const newUser = await users.create({ email, id: bcryptId });
         const token = Jwt.sign(
           {
             email: newUser.email,
@@ -28,7 +30,8 @@ export const login = async (req, res) => {
       if (existUser && existUser.isBlocked) {
         res.status(404).json({ message: "You are blocked by the server" });
       } else {
-        if (existUser && existUser.id === id) {
+        const encryptedID = await bcrypt.compare(id, existUser.id);
+        if (existUser && encryptedID) {
           existUser.loginAttempts = 0;
           await existUser.save();
           const token = Jwt.sign(
