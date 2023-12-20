@@ -1,56 +1,86 @@
-import Jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
 import users from "../Models/auth.js";
 import sendEmailNotification from "../Middleware/mailer.js";
+import { Bcrypt, Encrypt, tokenCreator } from "../Helpers/authHelpers.js";
 
 export const login = async (req, res) => {
   console.log(req.body);
-  const { email, id } = req.body;
+  const { email, id, gmail } = req.body;
+  console.log(gmail);
+  if (!email || !id)
+    return res.status(404).json({ message: "Invalid Credentials" });
+
   try {
     const existUser = await users.findOne({ email });
     if (!existUser) {
       try {
-        const bcryptId = await bcrypt.hash(id, 10);
-        const newUser = await users.create({ email, id: bcryptId });
-        const token = Jwt.sign(
-          {
-            email: newUser.email,
-            id: newUser._id,
-          },
-          process.env.JWT_SECRET,
-          {
-            expiresIn: "1h",
-          }
-        );
+        const { newUser, token } = await handleUserCreation(email, id, gmail);
+        console.log(newUser, token);
         res.status(200).json({ result: newUser, token });
       } catch (error) {
         res.status(500).json({ message: "Something went wrong ..." });
       }
     } else {
-      if (existUser && existUser.isBlocked) {
-        res.status(404).json({ message: "You are blocked by the server" });
+      if (existUser && existUser.isBlocked)
+        return res
+          .status(404)
+          .json({ message: "You are blocked by the server" });
+      if (!existUser.gmail) {
+        const { newUser, token } = await handleUserCreation(email, id, gmail);
+        return res.status(200).json({ result: newUser, token });
+      }
+      if (!existUser.id) {
+        const { newUser, token } = await handleUserCreation(email, id, gmail);
+        return res.status(200).json({ result: newUser, token });
+      }
+
+      const encryptedID = await handleUserChecking(existUser, id, gmail);
+      console.log(encryptedID);
+      if (existUser && encryptedID) {
+        existUser.loginAttempts = 0;
+        await existUser.save();
+        const token = await tokenCreator(existUser);
+
+        res.status(200).json({ result: existUser, token });
       } else {
-        const encryptedID = await bcrypt.compare(id, existUser.id);
-        if (existUser && encryptedID) {
-          existUser.loginAttempts = 0;
-          await existUser.save();
-          const token = Jwt.sign(
-            {
-              email: existUser.email,
-              id: existUser._id,
-            },
-            process.env.JWT_SECRET,
-            {
-              expiresIn: "1h",
-            }
-          );
-          res.status(200).json({ result: existUser, token });
-        } else {
-          await handleFailedLogin(existUser);
-          res.status(404).json({ message: "Incorrect username or password" });
-        }
+        await handleFailedLogin(existUser);
+        res.status(404).json({ message: "Incorrect username or password" });
       }
     }
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong ..." });
+  }
+};
+
+const handleUserCreation = async (email, id, gmail) => {
+  let newUser;
+  try {
+    const existUser = await users.findOne({ email });
+    const bcryptId = await Bcrypt(id);
+    if (!existUser)
+      if (gmail) newUser = await users.create({ email, gmail: bcryptId });
+      else newUser = await users.create({ email, id: bcryptId });
+    else {
+      if (!existUser.gmail) existUser.gmail = bcryptId;
+      if (!existUser.id) existUser.id = bcryptId;
+
+      newUser = await existUser.save();
+    }
+    const token = await tokenCreator(newUser);
+
+    return { newUser, token };
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong ..." });
+  }
+};
+
+const handleUserChecking = async (existUser, id, gmail) => {
+  let encryptedID;
+  try {
+    console.log("in the handle user creation", existUser, id, gmail);
+    if (gmail) encryptedID = await Encrypt(id, existUser.gmail);
+    else encryptedID = await Encrypt(id, existUser.id);
+    console.log(encryptedID, "encryptedID");
+    return encryptedID;
   } catch (error) {
     res.status(500).json({ message: "Something went wrong ..." });
   }

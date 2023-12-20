@@ -12,7 +12,7 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-app.use(morgan('dev'))
+app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(express.json({ limit: "30mb", extended: true }));
 app.use(express.urlencoded({ limit: "30mb", extended: true }));
@@ -23,7 +23,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/user", userRoutes);
-app.use("/video", videoRoutes); 
+app.use("/video", videoRoutes);
 app.use("/comment", commentsRoutes);
 
 const PORT = process.env.PORT;

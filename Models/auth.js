@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const userSchema = mongoose.Schema({
   email: { type: String, required: true },
-  id: { type: String, required: true },
+  gmail: { type: String },
+  id: { type: String },
   name: { type: String },
   desc: { type: String },
   joinedOn: {
